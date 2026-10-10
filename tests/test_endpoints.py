@@ -80,7 +80,7 @@ def test_pubsub_push_handler():
         "subscription": "projects/demo-proj/subscriptions/demo-sub"
     }
 
-    response = client.post("/api/v1/process-event", json=envelope)
+    response = client.post("/process", json=envelope)
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -98,7 +98,7 @@ def test_pubsub_push_ignores_non_finalize_events():
             "messageId": "msg-delete-01"
         }
     }
-    response = client.post("/api/v1/process-event", json=envelope)
+    response = client.post("/process", json=envelope)
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "skipped"

@@ -20,12 +20,12 @@ param(
     [string]$Region = "asia-southeast1",
     [string]$ServiceName = "doc-processor-service",
     [string]$BucketName = "",
-    [string]$TopicName = "doc-pipeline-events",
-    [string]$DlqTopicName = "doc-pipeline-dlq",
-    [string]$DlqSubName = "doc-pipeline-dlq-sub",
-    [string]$SubName = "doc-pipeline-cloudrun-sub",
-    [string]$DatasetId = "document_processing",
-    [string]$TableId = "document_metadata"
+    [string]$TopicName = "doc-processing-topic",
+    [string]$DlqTopicName = "doc-processing-dlq",
+    [string]$DlqSubName = "doc-processing-dlq-sub",
+    [string]$SubName = "doc-processing-push-sub",
+    [string]$DatasetId = "document_analytics",
+    [string]$TableId = "processed_documents"
 )
 
 $ErrorActionPreference = "Stop"
@@ -154,7 +154,7 @@ gcloud pubsub topics add-iam-policy-binding $DlqTopicName `
 
 # 7. Create Pub/Sub Push Subscription
 Write-Host "`n--> [7/8] Creating Push Subscription with OIDC & Exponential Backoff..." -ForegroundColor Yellow
-$PushEndpoint = "$CloudRunUrl/api/v1/process-event"
+$PushEndpoint = "$CloudRunUrl/process"
 
 if (gcloud pubsub subscriptions describe $SubName --project=$ProjectId 2>$null) {
     gcloud pubsub subscriptions delete $SubName --project=$ProjectId --quiet

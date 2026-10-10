@@ -86,6 +86,7 @@ def health_check():
     return {"status": "healthy", "service": "document-processor"}
 
 
+@app.post("/process", status_code=status.HTTP_200_OK, tags=["Pipeline Trigger"])
 @app.post("/api/v1/process-event", status_code=status.HTTP_200_OK, tags=["Pipeline Trigger"])
 async def handle_pubsub_event(envelope: PubSubPushEnvelope):
     """Primary handler for Pub/Sub Push Subscription.

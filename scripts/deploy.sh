@@ -15,12 +15,12 @@ PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || echo 
 REGION="${REGION:-asia-southeast1}"
 SERVICE_NAME="${SERVICE_NAME:-doc-processor-service}"
 BUCKET_NAME="${BUCKET_NAME:-${PROJECT_ID}-docs-ingest}"
-TOPIC_NAME="${TOPIC_NAME:-doc-pipeline-events}"
-DLQ_TOPIC_NAME="${DLQ_TOPIC_NAME:-doc-pipeline-dlq}"
-DLQ_SUB_NAME="${DLQ_SUB_NAME:-doc-pipeline-dlq-sub}"
-SUB_NAME="${SUB_NAME:-doc-pipeline-cloudrun-sub}"
-DATASET_ID="${DATASET_ID:-document_processing}"
-TABLE_ID="${TABLE_ID:-document_metadata}"
+TOPIC_NAME="${TOPIC_NAME:-doc-processing-topic}"
+DLQ_TOPIC_NAME="${DLQ_TOPIC_NAME:-doc-processing-dlq}"
+DLQ_SUB_NAME="${DLQ_SUB_NAME:-doc-processing-dlq-sub}"
+SUB_NAME="${SUB_NAME:-doc-processing-push-sub}"
+DATASET_ID="${DATASET_ID:-document_analytics}"
+TABLE_ID="${TABLE_ID:-processed_documents}"
 
 # Service Accounts
 RUN_SA_NAME="doc-runner-sa"
@@ -180,7 +180,7 @@ gcloud pubsub topics add-iam-policy-binding "${DLQ_TOPIC_NAME}" \
 # 7. Create Pub/Sub Push Subscription with OIDC & Exponential Backoff DLQ
 # ------------------------------------------------------------------------------
 echo "--> [7/8] Configuring Push Subscription with OIDC Auth & Dead-Letter Queue..."
-PUSH_ENDPOINT="${CLOUD_RUN_URL}/api/v1/process-event"
+PUSH_ENDPOINT="${CLOUD_RUN_URL}/process"
 
 if gcloud pubsub subscriptions describe "${SUB_NAME}" --project="${PROJECT_ID}" &>/dev/null; then
   echo "Deleting existing subscription to update configuration..."
