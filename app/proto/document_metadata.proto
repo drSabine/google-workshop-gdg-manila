@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package document_pipeline;
+
+// Schema for streaming document metadata into BigQuery via Storage Write API
+message DocumentMetadataRecord {
+    required string filename = 1;
+    required string date = 2; // ISO 8601 string representation (e.g. 2026-10-10T15:00:00Z)
+    repeated string tags = 3;
+    required int64 word_count = 4;
+    optional string gcs_uri = 5;
+    optional string content_type = 6;
+    optional int64 file_size_bytes = 7;
+    optional string summary = 8;
+}

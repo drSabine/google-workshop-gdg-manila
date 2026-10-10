@@ -1,0 +1,50 @@
+[
+  {
+    "name": "filename",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Name and path of the processed document in GCS"
+  },
+  {
+    "name": "date",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "ISO 8601 timestamp when the document was processed"
+  },
+  {
+    "name": "tags",
+    "type": "STRING",
+    "mode": "REPEATED",
+    "description": "Classification tags extracted during OCR analysis"
+  },
+  {
+    "name": "word_count",
+    "type": "INTEGER",
+    "mode": "REQUIRED",
+    "description": "Total word count extracted by OCR"
+  },
+  {
+    "name": "gcs_uri",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Cloud Storage URI (gs://bucket/object)"
+  },
+  {
+    "name": "content_type",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "MIME content type of the file"
+  },
+  {
+    "name": "file_size_bytes",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "File size in bytes"
+  },
+  {
+    "name": "summary",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Simulated OCR extracted executive summary or abstract"
+  }
+]
