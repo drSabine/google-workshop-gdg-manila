@@ -3,7 +3,7 @@ import json
 import base64
 import html
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 import streamlit as st
 
 # Configure page layout
@@ -141,7 +141,7 @@ button, input, select, textarea, div[data-baseweb="select"], .stTextInput > div 
 }}
 
 .doc-card:hover {{
-    border-color: #888888;
+    border-color: #000000;
 }}
 
 .doc-title {{
@@ -170,6 +170,28 @@ div[data-testid="stExpander"] {{
     border-radius: 0px !important;
     border: 1px solid #e0e0e0 !important;
     background-color: #ffffff !important;
+    margin-top: 1rem !important;
+}}
+
+div[data-testid="stExpander"] details summary {{
+    color: #000000 !important;
+    font-family: 'GeistMono', monospace !important;
+    background-color: #fafafa !important;
+    padding: 0.5rem 1rem !important;
+}}
+
+/* Code blocks */
+div[data-testid="stCodeBlock"], pre, code {{
+    background-color: #f7f7f7 !important;
+    color: #111111 !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 0px !important;
+}}
+
+/* Table Sharp Borders */
+div[data-testid="stDataFrame"] {{
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 0px !important;
 }}
 
 /* Hide Streamlit Standard Elements */
@@ -187,25 +209,14 @@ def build_bigquery_sql(
     project_id: str,
     dataset_id: str,
     table_id: str,
-    doc_type_filter: str = "ALL",
-    language_filter: str = "ALL",
     order_by: str = "date DESC",
     row_limit: int = 100,
     custom_where: str = ""
 ) -> str:
-    """Constructs parameterized SQL query with guardrails."""
+    """Constructs backward-compatible SQL query with guardrails."""
     conditions = []
     
-    if doc_type_filter and doc_type_filter != "ALL":
-        safe_type = doc_type_filter.replace("'", "")
-        conditions.append(f"document_type = '{safe_type}'")
-        
-    if language_filter and language_filter != "ALL":
-        safe_lang = language_filter.replace("'", "")
-        conditions.append(f"language = '{safe_lang}'")
-        
     if custom_where.strip():
-        # Clean custom where clause
         cleaned = custom_where.strip().lstrip("WHERE").lstrip("where").strip()
         if cleaned:
             conditions.append(f"({cleaned})")
@@ -213,19 +224,7 @@ def build_bigquery_sql(
     where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     
     return f"""
-SELECT 
-    filename, 
-    date, 
-    tags, 
-    word_count, 
-    summary, 
-    gcs_uri, 
-    content_type,
-    file_size_bytes,
-    language,
-    document_type,
-    entities_json,
-    content_sha256
+SELECT *
 FROM `{project_id}.{dataset_id}.{table_id}`
 {where_clause}
 ORDER BY {order_by}
@@ -239,7 +238,7 @@ def fetch_documents_from_bigquery(
     dataset_id: str,
     table_id: str,
     query_sql: str
-) -> List[Dict[str, Any]]:
+) -> Tuple[List[Dict[str, Any]], Optional[str]]:
     """Fetches document metadata from BigQuery with query scan protection and caching."""
     try:
         from google.cloud import bigquery
@@ -253,10 +252,11 @@ def fetch_documents_from_bigquery(
         
         query_job = client.query(query_sql, job_config=job_config)
         rows = [dict(row) for row in query_job.result()]
-        return rows
+        return rows, None
     except Exception as e:
-        # Fallback to local mock store for offline development
-        return load_local_mock_records()
+        error_msg = str(e)
+        mock_records = load_local_mock_records()
+        return mock_records, error_msg
 
 
 def load_local_mock_records() -> List[Dict[str, Any]]:
@@ -286,16 +286,6 @@ with st.sidebar:
     
     st.markdown("<h3>Query Options</h3>", unsafe_allow_html=True)
     
-    doc_type_filter = st.selectbox(
-        "Document Type Filter",
-        options=["ALL", "invoice", "contract", "resume", "report", "other"]
-    )
-    
-    language_filter = st.selectbox(
-        "Language Filter",
-        options=["ALL", "en", "tl", "es", "ja", "other"]
-    )
-    
     sort_order = st.selectbox(
         "Sort Order",
         options=["date DESC", "date ASC", "word_count DESC", "word_count ASC", "filename ASC"]
@@ -318,23 +308,20 @@ active_sql = build_bigquery_sql(
     project_id=project_id,
     dataset_id=dataset_id,
     table_id=table_id,
-    doc_type_filter=doc_type_filter,
-    language_filter=language_filter,
     order_by=sort_order,
     row_limit=row_limit,
     custom_where=custom_where
 )
 
-# SQL Inspection Accordion
-with st.expander("Inspect Active BigQuery SQL Query"):
-    st.code(active_sql, language="sql")
-    st.caption("Guardrails active: maximum_bytes_billed = 10,000,000 bytes (10 MB scan ceiling) : cache TTL = 60s")
-
 # Load Data
-records = fetch_documents_from_bigquery(project_id, dataset_id, table_id, active_sql)
+records, error_msg = fetch_documents_from_bigquery(project_id, dataset_id, table_id, active_sql)
+
+if error_msg:
+    st.error(f"BigQuery Query Notice: {error_msg}")
+    st.info("Tip: Update your BigQuery table schema in Cloud Shell by running: bq update antigravity-gdg-manila:document_analytics.processed_documents app/schema.json")
 
 if not records:
-    st.info("No records matched the query. Try adjusting the filters or upload new files to Cloud Storage.")
+    st.info("No records returned from BigQuery table. Upload a document to Cloud Storage to trigger ingestion.")
 else:
     # Summary Metrics Row
     total_docs = len(records)
@@ -353,11 +340,14 @@ else:
         st.markdown(f'<div class="stat-card"><div class="stat-label">Languages Detected</div><div class="stat-value">{", ".join(languages).upper()}</div></div>', unsafe_allow_html=True)
 
     # Search and Filter Controls
-    fcol1, fcol2 = st.columns([2, 1])
+    fcol1, fcol2, fcol3 = st.columns([2, 1, 1])
     with fcol1:
         search_query = st.text_input("Filter Results by Keyword", placeholder="Search filename or summary...")
     with fcol2:
         selected_tags = st.multiselect("Filter by Tag", options=all_tags)
+    with fcol3:
+        all_types = sorted(list(set(r.get("document_type") or "general" for r in records)))
+        selected_type = st.selectbox("Filter Document Type", options=["ALL"] + all_types)
 
     # Filter Records in Memory
     filtered = records
@@ -374,9 +364,29 @@ else:
             if any(t in (r.get("tags") or []) for t in selected_tags)
         ]
 
-    st.markdown(f"<h3>Processed Records ({len(filtered)})</h3>", unsafe_allow_html=True)
+    if selected_type != "ALL":
+        filtered = [
+            r for r in filtered
+            if (r.get("document_type") or "general") == selected_type
+        ]
 
-    # Display Records
+    # Interactive Table View
+    st.markdown(f"<h3>Document Table ({len(filtered)} records)</h3>", unsafe_allow_html=True)
+    table_rows = []
+    for r in filtered:
+        table_rows.append({
+            "Filename": r.get("filename") or "",
+            "Upload Date": str(r.get("date") or "")[:19],
+            "Tags": ", ".join(r.get("tags") or []),
+            "Word Count": r.get("word_count") or 0,
+            "Type": (r.get("document_type") or "general").upper(),
+            "Language": (r.get("language") or "en").upper(),
+            "Summary": r.get("summary") or ""
+        })
+    st.dataframe(table_rows, use_container_width=True, hide_index=True)
+
+    # Detail Cards
+    st.markdown("<h3>Document Detail Cards</h3>", unsafe_allow_html=True)
     for item in filtered:
         fname = html.escape(item.get("filename") or "untitled")
         fdate = html.escape(str(item.get("date") or ""))
@@ -437,3 +447,8 @@ else:
                             st.caption("AMOUNTS")
                             for amt in entities_dict["monetary_amounts"]:
                                 st.code(amt, language=None)
+
+# SQL Query Inspector Collapsed at Bottom
+with st.expander("Active BigQuery SQL Query (Click to Inspect)", expanded=False):
+    st.code(active_sql, language="sql")
+    st.caption("Guardrails active: maximum_bytes_billed = 10,000,000 bytes (10 MB scan ceiling) : cache TTL = 60s")
