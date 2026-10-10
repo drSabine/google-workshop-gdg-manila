@@ -67,6 +67,7 @@ gcloud services enable `
     bigquerystorage.googleapis.com `
     cloudbuild.googleapis.com `
     artifactregistry.googleapis.com `
+    aiplatform.googleapis.com `
     --project=$ProjectId
 
 # 2. Create Cloud Storage Bucket
@@ -78,6 +79,12 @@ if (-not $bucketExists) {
     Write-Host "Bucket gs://$BucketName already exists." -ForegroundColor Gray
 }
 
+$LifecyclePath = Join-Path $PSScriptRoot "..\lifecycle.json"
+if (Test-Path $LifecyclePath) {
+    Write-Host "Applying lifecycle rules to gs://$BucketName..." -ForegroundColor Gray
+    gcloud storage buckets update "gs://$BucketName" --lifecycle-file="$LifecyclePath"
+}
+
 # 3. Create BigQuery Dataset and Table
 Write-Host "`n--> [3/8] Creating BigQuery Dataset & Table..." -ForegroundColor Yellow
 $datasetExists = bq show "$($ProjectId):$DatasetId" 2>$null
@@ -86,11 +93,12 @@ if (-not $datasetExists) {
 }
 
 $tableExists = bq show "$($ProjectId):$DatasetId.$TableId" 2>$null
+$SchemaPath = Join-Path $PSScriptRoot "..\app\schema.json"
 if (-not $tableExists) {
-    $SchemaPath = Join-Path $PSScriptRoot "..\app\schema.json"
     bq mk --table "$($ProjectId):$DatasetId.$TableId" "$SchemaPath"
 } else {
-    Write-Host "Table $DatasetId.$TableId already exists." -ForegroundColor Gray
+    bq update "$($ProjectId):$DatasetId.$TableId" "$SchemaPath" 2>$null
+    Write-Host "Table $DatasetId.$TableId already exists. Schema refreshed." -ForegroundColor Gray
 }
 
 # 4. Service Accounts and IAM Roles
@@ -100,10 +108,11 @@ if (-not $runSaExists) {
     gcloud iam service-accounts create "doc-runner-sa" --display-name="Cloud Run Document Processor SA" --project=$ProjectId
 }
 
-# Grant Cloud Run SA GCS read and BigQuery write roles
+# Grant Cloud Run SA GCS read, BigQuery write, and Vertex AI user roles
 gcloud projects add-iam-policy-binding $ProjectId --member="serviceAccount:$RunSa" --role="roles/storage.objectViewer" | Out-Null
 gcloud projects add-iam-policy-binding $ProjectId --member="serviceAccount:$RunSa" --role="roles/bigquery.dataEditor" | Out-Null
 gcloud projects add-iam-policy-binding $ProjectId --member="serviceAccount:$RunSa" --role="roles/bigquery.jobUser" | Out-Null
+gcloud projects add-iam-policy-binding $ProjectId --member="serviceAccount:$RunSa" --role="roles/aiplatform.user" | Out-Null
 
 $invokerSaExists = gcloud iam service-accounts describe $InvokerSa --project=$ProjectId 2>$null
 if (-not $invokerSaExists) {
@@ -126,6 +135,8 @@ gcloud run deploy $ServiceName `
     --project=$ProjectId `
     --service-account=$RunSa `
     --set-env-vars="PROJECT_ID=$ProjectId,REGION=$Region,GCS_BUCKET_NAME=$BucketName,BQ_DATASET_ID=$DatasetId,BQ_TABLE_ID=$TableId,MOCK_GCP=false" `
+    --max-instances=2 `
+    --concurrency=4 `
     --no-allow-unauthenticated
 
 $CloudRunUrl = (gcloud run services describe $ServiceName --platform=managed --region=$Region --project=$ProjectId --format="value(status.url)")

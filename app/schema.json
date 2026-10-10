@@ -45,6 +45,30 @@
     "name": "summary",
     "type": "STRING",
     "mode": "NULLABLE",
-    "description": "Simulated OCR extracted executive summary or abstract"
+    "description": "Extracted executive summary or abstract"
+  },
+  {
+    "name": "language",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Detected ISO language code"
+  },
+  {
+    "name": "document_type",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Document classification category"
+  },
+  {
+    "name": "entities_json",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Extracted named entities formatted as JSON string"
+  },
+  {
+    "name": "content_sha256",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "SHA-256 hash of document content for deduplication"
   }
 ]

@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x64ocument_metadata.proto\x12\x11\x64ocument_pipeline\"\xab\x01\n\x16\x44ocumentMetadataRecord\x12\x10\n\x08\x66ilename\x18\x01 \x02(\t\x12\x0c\n\x04\x64\x61te\x18\x02 \x02(\t\x12\x0c\n\x04tags\x18\x03 \x03(\t\x12\x12\n\nword_count\x18\x04 \x02(\x03\x12\x0f\n\x07gcs_uri\x18\x05 \x01(\t\x12\x14\n\x0c\x63ontent_type\x18\x06 \x01(\t\x12\x17\n\x0f\x66ile_size_bytes\x18\x07 \x01(\x03\x12\x0f\n\x07summary\x18\x08 \x01(\t')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x64ocument_metadata.proto\x12\x11\x64ocument_pipeline\"\x83\x02\n\x16\x44ocumentMetadataRecord\x12\x10\n\x08\x66ilename\x18\x01 \x02(\t\x12\x0c\n\x04\x64\x61te\x18\x02 \x02(\t\x12\x0c\n\x04tags\x18\x03 \x03(\t\x12\x12\n\nword_count\x18\x04 \x02(\x03\x12\x0f\n\x07gcs_uri\x18\x05 \x01(\t\x12\x14\n\x0c\x63ontent_type\x18\x06 \x01(\t\x12\x17\n\x0f\x66ile_size_bytes\x18\x07 \x01(\x03\x12\x0f\n\x07summary\x18\x08 \x01(\t\x12\x10\n\x08language\x18\t \x01(\t\x12\x15\n\rdocument_type\x18\n \x01(\t\x12\x15\n\rentities_json\x18\x0b \x01(\t\x12\x16\n\x0e\x63ontent_sha256\x18\x0c \x01(\t')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,5 +32,5 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'document_metadata_pb2', _gl
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_DOCUMENTMETADATARECORD']._serialized_start=47
-  _globals['_DOCUMENTMETADATARECORD']._serialized_end=218
+  _globals['_DOCUMENTMETADATARECORD']._serialized_end=306
 # @@protoc_insertion_point(module_scope)

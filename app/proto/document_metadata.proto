@@ -12,4 +12,8 @@ message DocumentMetadataRecord {
     optional string content_type = 6;
     optional int64 file_size_bytes = 7;
     optional string summary = 8;
+    optional string language = 9;
+    optional string document_type = 10;
+    optional string entities_json = 11;
+    optional string content_sha256 = 12;
 }

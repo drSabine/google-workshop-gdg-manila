@@ -37,7 +37,7 @@ def test_ocr_processor_heuristics():
     assert meta_invoice["word_count"] > 10
 
     # Test resume heuristic
-    meta_cv = ocr.extract_metadata("test-bucket", "resumes/candidate_profile.pdf", content_bytes=b"%PDF-1.4 simulated")
+    meta_cv = ocr.extract_metadata("test-bucket", "resumes/candidate_profile.pdf", content_bytes=b"%PDF-1.4 simulated resume cv")
     assert "hr" in meta_cv["tags"]
     assert "resume" in meta_cv["tags"]
 

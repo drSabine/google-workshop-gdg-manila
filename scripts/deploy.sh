@@ -57,6 +57,7 @@ gcloud services enable \
   bigquerystorage.googleapis.com \
   cloudbuild.googleapis.com \
   artifactregistry.googleapis.com \
+  aiplatform.googleapis.com \
   --project="${PROJECT_ID}"
 
 # ------------------------------------------------------------------------------
@@ -70,6 +71,13 @@ if ! gcloud storage buckets describe "gs://${BUCKET_NAME}" --project="${PROJECT_
     --uniform-bucket-level-access
 else
   echo "Bucket gs://${BUCKET_NAME} already exists."
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIFECYCLE_FILE="${SCRIPT_DIR}/../lifecycle.json"
+if [ -f "${LIFECYCLE_FILE}" ]; then
+  echo "Applying lifecycle rule to gs://${BUCKET_NAME}..."
+  gcloud storage buckets update "gs://${BUCKET_NAME}" --lifecycle-file="${LIFECYCLE_FILE}"
 fi
 
 # ------------------------------------------------------------------------------
@@ -88,7 +96,10 @@ if ! bq show "${PROJECT_ID}:${DATASET_ID}.${TABLE_ID}" &>/dev/null; then
   bq mk --table "${PROJECT_ID}:${DATASET_ID}.${TABLE_ID}" "${SCHEMA_FILE}"
   echo "Created BigQuery table ${DATASET_ID}.${TABLE_ID}"
 else
-  echo "Table ${DATASET_ID}.${TABLE_ID} already exists."
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  SCHEMA_FILE="${SCRIPT_DIR}/../app/schema.json"
+  bq update "${PROJECT_ID}:${DATASET_ID}.${TABLE_ID}" "${SCHEMA_FILE}" || true
+  echo "Table ${DATASET_ID}.${TABLE_ID} already exists. Schema refreshed."
 fi
 
 # ------------------------------------------------------------------------------
@@ -103,7 +114,7 @@ if ! gcloud iam service-accounts describe "${RUN_SA}" --project="${PROJECT_ID}" 
     --project="${PROJECT_ID}"
 fi
 
-# Grant Cloud Run SA read access to GCS and write access to BigQuery
+# Grant Cloud Run SA read access to GCS, write access to BigQuery, and Vertex AI access
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${RUN_SA}" \
   --role="roles/storage.objectViewer" >/dev/null
@@ -115,6 +126,10 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${RUN_SA}" \
   --role="roles/bigquery.jobUser" >/dev/null
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${RUN_SA}" \
+  --role="roles/aiplatform.user" >/dev/null
 
 # 4b. Pub/Sub Push Invoker Service Account
 if ! gcloud iam service-accounts describe "${INVOKER_SA}" --project="${PROJECT_ID}" &>/dev/null; then
@@ -150,6 +165,8 @@ gcloud run deploy "${SERVICE_NAME}" \
   --project="${PROJECT_ID}" \
   --service-account="${RUN_SA}" \
   --set-env-vars="PROJECT_ID=${PROJECT_ID},REGION=${REGION},GCS_BUCKET_NAME=${BUCKET_NAME},BQ_DATASET_ID=${DATASET_ID},BQ_TABLE_ID=${TABLE_ID},MOCK_GCP=false" \
+  --max-instances=2 \
+  --concurrency=4 \
   --no-allow-unauthenticated
 
 # Retrieve deployed Cloud Run URL

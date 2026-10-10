@@ -72,6 +72,14 @@ class BigQueryStorageWriter:
             record.file_size_bytes = int(data["file_size_bytes"])
         if data.get("summary"):
             record.summary = data["summary"]
+        if data.get("language"):
+            record.language = data["language"]
+        if data.get("document_type"):
+            record.document_type = data["document_type"]
+        if data.get("entities_json"):
+            record.entities_json = data["entities_json"]
+        if data.get("content_sha256"):
+            record.content_sha256 = data["content_sha256"]
 
         return record
 
@@ -147,6 +155,10 @@ class BigQueryStorageWriter:
                     "content_type": record.content_type if record.HasField("content_type") else None,
                     "file_size_bytes": record.file_size_bytes if record.HasField("file_size_bytes") else None,
                     "summary": record.summary if record.HasField("summary") else None,
+                    "language": record.language if record.HasField("language") else None,
+                    "document_type": record.document_type if record.HasField("document_type") else None,
+                    "entities_json": record.entities_json if record.HasField("entities_json") else None,
+                    "content_sha256": record.content_sha256 if record.HasField("content_sha256") else None,
                     "_mock_stream_timestamp": datetime.now(timezone.utc).isoformat()
                 }
                 f.write(json.dumps(item) + "\n")
