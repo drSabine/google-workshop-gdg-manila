@@ -110,6 +110,12 @@ if (-not $invokerSaExists) {
     gcloud iam service-accounts create "pubsub-invoker-sa" --display-name="Pub/Sub Cloud Run Invoker SA" --project=$ProjectId
 }
 
+# Grant default Compute SA storage and build permissions for Cloud Build
+gcloud projects add-iam-policy-binding $ProjectId --member="serviceAccount:$ProjectNumber-compute@developer.gserviceaccount.com" --role="roles/storage.admin" | Out-Null
+gcloud projects add-iam-policy-binding $ProjectId --member="serviceAccount:$ProjectNumber-compute@developer.gserviceaccount.com" --role="roles/artifactregistry.writer" | Out-Null
+gcloud projects add-iam-policy-binding $ProjectId --member="serviceAccount:$ProjectNumber-compute@developer.gserviceaccount.com" --role="roles/cloudbuild.builds.builder" | Out-Null
+
+
 # 5. Build and Deploy Cloud Run Service
 Write-Host "`n--> [5/8] Deploying Cloud Run Service $ServiceName..." -ForegroundColor Yellow
 $ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")

@@ -123,6 +123,21 @@ if ! gcloud iam service-accounts describe "${INVOKER_SA}" --project="${PROJECT_I
     --project="${PROJECT_ID}"
 fi
 
+# 4c. Default Compute Engine SA (used by Cloud Build to package and upload containers)
+COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${COMPUTE_SA}" \
+  --role="roles/storage.admin" >/dev/null
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${COMPUTE_SA}" \
+  --role="roles/artifactregistry.writer" >/dev/null
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${COMPUTE_SA}" \
+  --role="roles/cloudbuild.builds.builder" >/dev/null
+
+
 # ------------------------------------------------------------------------------
 # 5. Build and Deploy Cloud Run Service
 # ------------------------------------------------------------------------------
